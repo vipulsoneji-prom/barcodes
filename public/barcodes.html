@@ -1,0 +1,130 @@
+<!--
+  ~ Copyright (c) 2024 Promethean. All Rights Reserved.
+  ~ Unauthorized copying of this file or any part of this file via any medium is strictly prohibited.
+  -->
+
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Barcode reader</title>
+        <meta name="robots" content="noindex" />
+        <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+        <script src="https://unpkg.com/tone" type="text/javascript"></script>
+        <style>
+            .scannerContainer {
+                width: 600px;
+                border: 1px solid black;
+                padding: 10px;
+            }
+            .resultsBox {
+                width: 400px;
+                margin-left: 10px;
+            }
+            .readerDiv {
+                width: 600px;
+                transform: scaleX(-1);
+            }
+            td {
+                vertical-align: top;
+            }
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f0f0f0;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Barcode Scanner</h1>
+        <table class="scannerContainer">
+            <tr>
+                <td>
+                    <div id="reader" class="readerDiv"></div>
+                </td>
+                <td>
+                    <p><strong>Results</strong></p>
+                    <p id="results" class="resultsBox"></p>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <input type="button" value="Start Scanning" onclick="startScanning()" />
+                    <input type="button" value="Stop Scanning" onclick="stopScanning()" />
+                </td>
+                <td>
+                    <input type="button" value="Clear Results" onclick="clearResults()" />
+                    <input type="button" value="Download Barcode Samples" onclick="downloadSamples()" />
+                </td>
+            </tr>
+        </table>
+
+        <script>
+            let cameraId = undefined;
+            let html5QrCode = undefined;
+            let synth = undefined;
+            const collectedCodes = [];
+
+            const config = { fps: 10, qrbox: qrboxFunction };
+
+            document.addEventListener('DOMContentLoaded', async function () {
+                synth = new Tone.Synth().toDestination();
+                startScanning();
+            });
+
+            function qrboxFunction(viewfinderWidth, viewfinderHeight) {
+                const qrboxWidth = Math.floor(viewfinderWidth * 0.8);
+                const qrboxHeight = Math.floor(viewfinderHeight * 0.5);
+
+                return {
+                    width: qrboxWidth,
+                    height: qrboxHeight,
+                };
+            }
+
+            async function startScanning() {
+                cameraId = await getCameras();
+                html5QrCode = new Html5Qrcode('reader');
+                html5QrCode.start({ deviceId: { exact: cameraId } }, config, qrCodeSuccessCallback);
+            }
+
+            async function stopScanning() {
+                await html5QrCode.stop();
+            }
+
+            function clearResults() {
+                collectedCodes.length = 0;
+                document.getElementById('results').innerHTML = '';
+            }
+
+            function downloadSamples() {
+                document.location.href = './barcode-samples.pptx';
+            }
+
+            function qrCodeSuccessCallback(decodedText, decodedResult) {
+                console.log('Success callback called');
+                // get the format of the decoded result
+                const decodedFormat = decodedResult.result.format.formatName;
+
+                const displayText = `(${decodedFormat}) ${decodedText}`;
+
+                if (collectedCodes.includes(displayText)) {
+                    // console.log("Code already scanned");
+                } else {
+                    collectedCodes.push(displayText);
+                    console.log('Code scanned: ' + displayText);
+                    synth.triggerAttackRelease('C6', '8n');
+                }
+                document.getElementById('results').innerHTML = collectedCodes.join('<br>');
+            }
+
+            async function getCameras() {
+                const cameras = await Html5Qrcode.getCameras();
+                console.log('cameras', cameras);
+                if (cameras && cameras.length >= 1) {
+                    return cameras[0].id;
+                }
+                return undefined;
+            }
+        </script>
+    </body>
+</html>
