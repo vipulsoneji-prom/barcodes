@@ -142,7 +142,8 @@
                 if (cameras.length === 1) {
                     return cameras[0].id;
                 }
-                return await getRearCameraId();
+                const rearCameraId = await getRearCameraId();
+                return rearCameraId || cameras[0].id;
             }
 
             async function showCameras() {
