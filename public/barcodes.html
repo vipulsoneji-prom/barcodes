@@ -5,182 +5,203 @@
 
 <!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/html">
-    <head>
-        <meta charset="UTF-8" />
-        <title>Barcode reader</title>
-        <meta name="robots" content="noindex" />
-        <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-        <script src="https://unpkg.com/tone" type="text/javascript"></script>
-        <style>
-            .scannerContainer {
-                width: 600px;
-                border: 1px solid black;
-                padding: 10px;
-            }
-            .resultsBox {
-                width: 400px;
-                margin-left: 10px;
-            }
-            .readerDiv {
-                width: 600px;
-                transform: scaleX(-1);
-            }
-            td {
-                vertical-align: top;
-            }
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f0f0f0;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>Barcode Scanner</h1>
-        <table class="scannerContainer">
-            <tr>
-                <td>
-                    <div id="reader" class="readerDiv"></div>
-                </td>
-                <td>
-                    <p><strong>Results</strong></p>
-                    <p id="results" class="resultsBox"></p>
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    <input type="button" value="Start Scanning" onclick="startScanning()" />
-                    <input type="button" value="Stop Scanning" onclick="stopScanning()" />
-                </td>
-                <td>
-                    <input type="button" value="Clear Results" onclick="clearResults()" />
-                    <input type="button" value="Show Cameras" onclick="showCameras()" />
-                </td>
-            </tr>
-            <tr>
-                <td colspan="2" id="debugOut">
-                </td>
-            </tr>
-        </table>
+<head>
+    <meta charset="UTF-8"/>
+    <title>Barcode reader</title>
+    <meta name="robots" content="noindex"/>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://unpkg.com/tone" type="text/javascript"></script>
+    <style>
+        .scannerContainer {
+            width: 600px;
+            border: 1px solid black;
+            padding: 10px;
+        }
 
-        <script>
-            let cameraId = undefined;
-            let html5QrCode = undefined;
-            let synth = undefined;
-            const collectedCodes = [];
+        .resultsBox {
+            width: 400px;
+            margin-left: 10px;
+        }
 
-            const config = { fps: 10, qrbox: qrboxFunction };
-            let selectedCameraId = 0;
+        .readerDiv {
+            width: 600px;
+            transform: scaleX(-1);
+        }
 
-            document.addEventListener('DOMContentLoaded', async function () {
-                synth = new Tone.Synth().toDestination();
-                startScanning();
-            });
+        td {
+            vertical-align: top;
+        }
 
-            function qrboxFunction(viewfinderWidth, viewfinderHeight) {
-                const qrboxWidth = Math.floor(viewfinderWidth * 0.8);
-                const qrboxHeight = Math.floor(viewfinderHeight * 0.5);
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+<h1>Barcode Scanner</h1>
+<table class="scannerContainer">
+    <tr>
+        <td>
+            <div id="reader" class="readerDiv"></div>
+        </td>
+        <td>
+            <p><strong>Results</strong></p>
+            <p id="results" class="resultsBox"></p>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <input type="button" value="Start Scanning" onclick="startScanning()"/>
+            <input type="button" value="Stop Scanning" onclick="stopScanning()"/>
+        </td>
+        <td>
+            <input type="button" value="Clear Results" onclick="clearResults()"/>
+            <input type="button" value="Show Cameras" onclick="showCameras()"/>
 
-                return {
-                    width: qrboxWidth,
-                    height: qrboxHeight,
-                };
-            }
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2">
+            <label for="cameraDropdown">Camera: </label>
+            <select id="cameraDropdown"></select>
+        </td>
+    </tr>
+    <tr>
+        <td colspan="2" id="debugOut">
+        </td>
+    </tr>
+</table>
 
-            async function startScanning() {
-                cameraId = await getCameras();
-                if (!cameraId) {
-                    alert('No cameras found');
-                    return;
-                }
-                debugOut(`Using camera: ${cameraId}`);
-                html5QrCode = new Html5Qrcode('reader');
-                html5QrCode.start({ deviceId: { exact: cameraId } }, config, qrCodeSuccessCallback);
-            }
+<script>
+  let cameraId = undefined
+  let html5QrCode = undefined
+  let synth = undefined
+  const collectedCodes = []
 
-            function debugOut(msg) {
-                const outDiv = document.getElementById('debugOut');
-                outDiv.innerText += `${msg}\n`;
-            }
+  const config = { fps: 10, qrbox: qrboxFunction }
+  let selectedCameraId = 0
 
-            async function stopScanning() {
-                await html5QrCode.stop();
-            }
+  document.addEventListener('DOMContentLoaded', async function () {
+    synth = new Tone.Synth().toDestination();
+    await getCameras();
+    startScanning()
+  })
 
-            function clearResults() {
-                collectedCodes.length = 0;
-                document.getElementById('results').innerHTML = '';
-                document.getElementById('debugOut').innerText = '';
-            }
+  function qrboxFunction (viewfinderWidth, viewfinderHeight) {
+    const qrboxWidth = Math.floor(viewfinderWidth * 0.8)
+    const qrboxHeight = Math.floor(viewfinderHeight * 0.5)
 
-            function downloadSamples() {
-                document.location.href = './barcode-samples.pptx';
-            }
+    return {
+      width: qrboxWidth,
+      height: qrboxHeight,
+    }
+  }
 
-            function qrCodeSuccessCallback(decodedText, decodedResult) {
-                console.log('Success callback called');
-                // get the format of the decoded result
-                const decodedFormat = decodedResult.result.format.formatName;
+  async function startScanning () {
+    const cameraDropdown = document.getElementById('cameraDropdown');
+    cameraId = cameraDropdown.value;
+    if (!cameraId) {
+      alert('No cameras found')
+      return
+    }
+    debugOut(`Using camera: ${cameraId}`)
+    html5QrCode = new Html5Qrcode('reader')
+    html5QrCode.start({ deviceId: { exact: cameraId } }, config, qrCodeSuccessCallback)
+  }
 
-                const displayText = `(${decodedFormat}) ${decodedText}`;
+  function debugOut (msg) {
+    const outDiv = document.getElementById('debugOut')
+    outDiv.innerText += `${msg}\n`
+  }
 
-                if (collectedCodes.includes(displayText)) {
-                    // console.log("Code already scanned");
-                } else {
-                    collectedCodes.push(displayText);
-                    console.log('Code scanned: ' + displayText);
-                    synth.triggerAttackRelease('C6', '8n');
-                }
-                document.getElementById('results').innerHTML = collectedCodes.join('<br>');
-            }
+  async function stopScanning () {
+    await html5QrCode.stop()
+  }
 
-            async function getCameras() {
-                const cameras = await Html5Qrcode.getCameras();
-                console.log('cameras', cameras);
-                if (!cameras || cameras.length === 0) {
-                    return undefined
-                }
-                if (cameras.length >= 1) {
-                    return cameras[0].id;
-                }
-                const rearCameraId = await getRearCameraId();
-                return rearCameraId || cameras[0].id;
-            }
+  function clearResults () {
+    collectedCodes.length = 0
+    document.getElementById('results').innerHTML = ''
+    document.getElementById('debugOut').innerText = ''
+  }
 
-            async function showCameras() {
-              // Request permission to access media devices
-              await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-              // Get all media devices
-              const devices = await navigator.mediaDevices.enumerateDevices();
+  function downloadSamples () {
+    document.location.href = './barcode-samples.pptx'
+  }
 
-              // Filter the list to get only video input devices (cameras)
-              const videoDevices = devices.filter(device => device.kind === 'videoinput');
+  function qrCodeSuccessCallback (decodedText, decodedResult) {
+    console.log('Success callback called')
+    // get the format of the decoded result
+    const decodedFormat = decodedResult.result.format.formatName
 
-              debugOut(JSON.stringify(videoDevices, null, 2));
-            }
+    const displayText = `(${decodedFormat}) ${decodedText}`
 
-            async function getRearCameraId() {
-                try {
-                    // Request permission to access media devices
-                    await navigator.mediaDevices.getUserMedia({ video: true });
+    if (collectedCodes.includes(displayText)) {
+      // console.log("Code already scanned");
+    } else {
+      collectedCodes.push(displayText)
+      console.log('Code scanned: ' + displayText)
+      synth.triggerAttackRelease('C6', '8n')
+    }
+    document.getElementById('results').innerHTML = collectedCodes.join('<br>')
+  }
 
-                    // Get all media devices
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    
-                    // Filter the list to get only video input devices (cameras)
-                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                    
-                    // Look for a label that indicates the rear camera
-                    const rearCamera = videoDevices.find(device =>
-                        device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')
-                    );
-                    
-                    // Return the device ID if found, otherwise return null
-                    return rearCamera ? rearCamera.deviceId : null;
-                } catch (error) {
-                    console.error('Error accessing cameras:', error);
-                    return null;
-                }
-            }         
-        </script>
-    </body>
+  async function getCameras () {
+    const cameras = await Html5Qrcode.getCameras()
+    console.log('cameras', cameras)
+    const cameraDropdown = document.getElementById('cameraDropdown')
+    cameraDropdown.innerHTML = '' // Clear existing options
+
+    if (!cameras || cameras.length === 0) {
+      const option = document.createElement('option')
+      option.text = 'No cameras found'
+      cameraDropdown.add(option)
+      return undefined
+    }
+    cameras.forEach(camera => {
+      const option = document.createElement('option');
+      option.value = camera.id;
+      option.text = camera.label || `Camera ${camera.id}`;
+      cameraDropdown.add(option);
+    });
+    return cameras[0].id
+  }
+
+  async function showCameras () {
+    // Request permission to access media devices
+    await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    // Get all media devices
+    const devices = await navigator.mediaDevices.enumerateDevices()
+
+    // Filter the list to get only video input devices (cameras)
+    const videoDevices = devices.filter(device => device.kind === 'videoinput')
+
+    debugOut(JSON.stringify(videoDevices, null, 2))
+  }
+
+  async function getRearCameraId () {
+    try {
+      // Request permission to access media devices
+      await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+
+      // Get all media devices
+      const devices = await navigator.mediaDevices.enumerateDevices()
+
+      // Filter the list to get only video input devices (cameras)
+      const videoDevices = devices.filter(device => device.kind === 'videoinput')
+
+      // Look for a label that indicates the rear camera
+      const rearCamera = videoDevices.find(device =>
+        device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')
+      )
+
+      // Return the device ID if found, otherwise return null
+      return rearCamera ? rearCamera.deviceId : null
+    } catch (error) {
+      console.error('Error accessing cameras:', error)
+      return null
+    }
+  }
+</script>
+</body>
 </html>
