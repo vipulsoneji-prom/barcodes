@@ -139,7 +139,7 @@
                 if (!cameras || cameras.length === 0) {
                     return undefined
                 }
-                if (cameras.length === 1) {
+                if (cameras.length >= 1) {
                     return cameras[0].id;
                 }
                 const rearCameraId = await getRearCameraId();
@@ -148,7 +148,7 @@
 
             async function showCameras() {
               // Request permission to access media devices
-              await navigator.mediaDevices.getUserMedia({ video: true });
+              await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
               // Get all media devices
               const devices = await navigator.mediaDevices.enumerateDevices();
 
@@ -171,7 +171,7 @@
                     
                     // Look for a label that indicates the rear camera
                     const rearCamera = videoDevices.find(device =>
-                    device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')
+                        device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')
                     );
                     
                     // Return the device ID if found, otherwise return null
