@@ -65,6 +65,7 @@
             const collectedCodes = [];
 
             const config = { fps: 10, qrbox: qrboxFunction };
+            let selectedCameraId = 0;
 
             document.addEventListener('DOMContentLoaded', async function () {
                 synth = new Tone.Synth().toDestination();
@@ -120,11 +121,39 @@
             async function getCameras() {
                 const cameras = await Html5Qrcode.getCameras();
                 console.log('cameras', cameras);
-                if (cameras && cameras.length >= 1) {
+                if (!cameras || cameras.length === 0) {
+                    return undefined
+                }
+                if (cameras.length === 1) {
                     return cameras[0].id;
                 }
-                return undefined;
+                return await getRearCameraId();
             }
+
+
+            async function getRearCameraId() {
+                try {
+                    // Request permission to access media devices
+                    await navigator.mediaDevices.getUserMedia({ video: true });
+                    
+                    // Get all media devices
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    
+                    // Filter the list to get only video input devices (cameras)
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    
+                    // Look for a label that indicates the rear camera
+                    const rearCamera = videoDevices.find(device =>
+                    device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')
+                    );
+                    
+                    // Return the device ID if found, otherwise return null
+                    return rearCamera ? rearCamera.deviceId : null;
+                } catch (error) {
+                    console.error('Error accessing cameras:', error);
+                    return null;
+                }
+            }         
         </script>
     </body>
 </html>
