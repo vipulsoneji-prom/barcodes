@@ -11,6 +11,7 @@
     <meta name="robots" content="noindex"/>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://unpkg.com/tone" type="text/javascript"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css" integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <style>
         .scannerContainer {
             width: 600px;
@@ -25,7 +26,6 @@
 
         .readerDiv {
             width: 600px;
-            transform: scaleX(-1);
         }
 
         td {
@@ -36,6 +36,12 @@
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
         }
+
+        .button {
+            padding: 5px;
+            border-radius: 3px;
+            border: 2px solid #ccc;
+        }
     </style>
 </head>
 <body>
@@ -43,32 +49,41 @@
 <table class="scannerContainer">
     <tr>
         <td>
+            <span class="button fa-solid fa-play" onclick="startScanning()"></span>
+            <span class="button fa-solid fa-stop" onclick="stopScanning()"></span>
+            <span class="button fa-solid fa-trash" onclick="clearResults()"></span>
+            <span class="button fa-solid fa-circle-info" onclick="showCameras()"></span>
+        </td>
+    </tr>
+    <tr>
+        <td>
             <div id="reader" class="readerDiv"></div>
         </td>
+    </tr>
+    <tr>
         <td>
             <p><strong>Results</strong></p>
             <p id="results" class="resultsBox"></p>
         </td>
     </tr>
-    <tr>
-        <td>
-            <input type="button" value="Start Scanning" onclick="startScanning()"/>
-            <input type="button" value="Stop Scanning" onclick="stopScanning()"/>
-        </td>
-        <td>
-            <input type="button" value="Clear Results" onclick="clearResults()"/>
-            <input type="button" value="Show Cameras" onclick="showCameras()"/>
 
-        </td>
-    </tr>
     <tr>
-        <td colspan="2">
+        <td>
             <label for="cameraDropdown">Camera: </label>
-            <select id="cameraDropdown"></select>
+            <select id="cameraDropdown" onchange="restartScanning()"></select>
         </td>
     </tr>
     <tr>
-        <td colspan="2" id="debugOut">
+        <td>
+            <label for="flipImage">Flip: </label>
+            <select id="flipImage" onchange="restartScanning()">
+                <option value="true" selected>Yes</option>
+                <option value="false">No</option>
+            </select>
+        </td>
+    </tr>
+    <tr>
+        <td id="debugOut">
         </td>
     </tr>
 </table>
@@ -88,6 +103,11 @@
     startScanning()
   })
 
+  async function restartScanning () {
+    await stopScanning()
+    startScanning()
+  }
+
   function qrboxFunction (viewfinderWidth, viewfinderHeight) {
     const qrboxWidth = Math.floor(viewfinderWidth * 0.8)
     const qrboxHeight = Math.floor(viewfinderHeight * 0.5)
@@ -96,6 +116,22 @@
       width: qrboxWidth,
       height: qrboxHeight,
     }
+  }
+
+  function getScanningConfig() {
+    const flipImage = document.getElementById('flipImage').value === 'true';
+
+    const readerDiv = document.getElementById('reader');
+    if (flipImage) {
+      readerDiv.style.transform = 'scaleX(-1)';
+    } else {
+      readerDiv.style.transform = 'scaleX(1)';
+    }
+
+    return {
+      fps: 10,
+      qrbox: qrboxFunction,
+    };
   }
 
   async function startScanning () {
@@ -107,7 +143,10 @@
     }
     debugOut(`Using camera: ${cameraId}`)
     html5QrCode = new Html5Qrcode('reader')
-    html5QrCode.start({ deviceId: { exact: cameraId } }, config, qrCodeSuccessCallback)
+    const config = getScanningConfig();
+    console.log('config', config);
+    html5QrCode.start(
+      { deviceId: { exact: cameraId } }, config , qrCodeSuccessCallback)
   }
 
   function debugOut (msg) {
@@ -179,29 +218,6 @@
     debugOut(JSON.stringify(videoDevices, null, 2))
   }
 
-  async function getRearCameraId () {
-    try {
-      // Request permission to access media devices
-      await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-
-      // Get all media devices
-      const devices = await navigator.mediaDevices.enumerateDevices()
-
-      // Filter the list to get only video input devices (cameras)
-      const videoDevices = devices.filter(device => device.kind === 'videoinput')
-
-      // Look for a label that indicates the rear camera
-      const rearCamera = videoDevices.find(device =>
-        device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')
-      )
-
-      // Return the device ID if found, otherwise return null
-      return rearCamera ? rearCamera.deviceId : null
-    } catch (error) {
-      console.error('Error accessing cameras:', error)
-      return null
-    }
-  }
 </script>
 </body>
 </html>
